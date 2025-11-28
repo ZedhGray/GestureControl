@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.CompoundButton
+import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -21,16 +23,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var startButton: CardView
     private lateinit var stopButton: CardView
     private lateinit var enableAccessibilityButton: CardView
+    private lateinit var voiceToggle: Switch
 
     private var isServiceRunning = false
+    private var isVoiceServiceRunning = false
     private val CAMERA_PERMISSION_CODE = 100
     private val OVERLAY_PERMISSION_CODE = 101
+    private val AUDIO_PERMISSION_CODE = 102
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Hacer que la app use pantalla completa con barra de estado transparente
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
             android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -41,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         startButton = findViewById(R.id.startButton)
         stopButton = findViewById(R.id.stopButton)
         enableAccessibilityButton = findViewById(R.id.enableAccessibilityButton)
+        voiceToggle = findViewById(R.id.voiceToggle)
 
         startButton.setOnClickListener {
             if (checkPermissions()) {
@@ -62,6 +67,19 @@ class MainActivity : AppCompatActivity() {
             openAccessibilitySettings()
         }
 
+        voiceToggle.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                if (checkAudioPermission()) {
+                    startVoiceService()
+                } else {
+                    requestAudioPermission()
+                    voiceToggle.isChecked = false
+                }
+            } else {
+                stopVoiceService()
+            }
+        }
+
         updateUI()
     }
 
@@ -73,6 +91,12 @@ class MainActivity : AppCompatActivity() {
         val overlayPermission = Settings.canDrawOverlays(this)
 
         return cameraPermission && overlayPermission
+    }
+
+    private fun checkAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestPermissions() {
@@ -91,6 +115,14 @@ class MainActivity : AppCompatActivity() {
             )
             startActivityForResult(intent, OVERLAY_PERMISSION_CODE)
         }
+    }
+
+    private fun requestAudioPermission() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            AUDIO_PERMISSION_CODE
+        )
     }
 
     override fun onRequestPermissionsResult(
@@ -117,6 +149,15 @@ class MainActivity : AppCompatActivity() {
                     showPermissionDialog()
                 }
             }
+            AUDIO_PERMISSION_CODE -> {
+                if (grantResults.isNotEmpty() &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startVoiceService()
+                    voiceToggle.isChecked = true
+                } else {
+                    Toast.makeText(this, "Permiso de micrófono necesario para comandos de voz", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -138,7 +179,8 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Permisos necesarios")
             .setMessage("GestureControl necesita:\n\n" +
                     "• Cámara: Para detectar gestos\n" +
-                    "• Superposición: Para funcionar sobre otras apps")
+                    "• Superposición: Para funcionar sobre otras apps\n" +
+                    "• Micrófono: Para comandos de voz")
             .setPositiveButton("Conceder") { _, _ ->
                 requestPermissions()
             }
@@ -171,7 +213,7 @@ class MainActivity : AppCompatActivity() {
         ContextCompat.startForegroundService(this, intent)
         isServiceRunning = true
         updateUI()
-        Toast.makeText(this, "✓ Control activado", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "✓ Gestos activados", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopGestureService() {
@@ -179,14 +221,29 @@ class MainActivity : AppCompatActivity() {
         stopService(intent)
         isServiceRunning = false
         updateUI()
-        Toast.makeText(this, "Control desactivado", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Gestos desactivados", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun startVoiceService() {
+        val intent = Intent(this, VoiceCommandService::class.java)
+        startService(intent)
+        VoiceCommandService.setEnabled(true)
+        isVoiceServiceRunning = true
+        Toast.makeText(this, "🎤 Comandos de voz activados", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopVoiceService() {
+        val intent = Intent(this, VoiceCommandService::class.java)
+        stopService(intent)
+        VoiceCommandService.setEnabled(false)
+        isVoiceServiceRunning = false
+        Toast.makeText(this, "🎤 Comandos de voz desactivados", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateUI() {
         val hasPermissions = checkPermissions()
         val hasAccessibility = AccessibilityGestureService.isEnabled()
 
-        // Actualizar iconos de status
         if (hasPermissions) {
             statusText.text = "✓"
             statusText.setTextColor(getColor(android.R.color.holo_green_light))
@@ -207,7 +264,6 @@ class MainActivity : AppCompatActivity() {
             enableAccessibilityButton.isEnabled = true
         }
 
-        // Actualizar botones
         if (hasPermissions && hasAccessibility) {
             if (isServiceRunning) {
                 startButton.alpha = 0.5f

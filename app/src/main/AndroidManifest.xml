@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />  <!-- NUEVO -->
 
     <uses-feature android:name="android.hardware.camera.front" android:required="true" />
 
@@ -28,12 +29,18 @@
             </intent-filter>
         </activity>
 
-        <!-- Servicio de MANOS (nuevo) -->
+        <!-- Servicio de gestos de mano -->
         <service
             android:name=".HandGestureService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="camera" />
+
+        <!-- NUEVO - Servicio de comandos de voz -->
+        <service
+            android:name=".VoiceCommandService"
+            android:enabled="true"
+            android:exported="false" />
 
         <!-- Servicio de Accesibilidad -->
         <service
