@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">GestureControl</string>
+    <string name="accessibility_service_description">GestureControl necesita este permiso para hacer swipes automáticos en TikTok cuando detecta que mueves la cabeza.</string>
+</resources>
