@@ -12,7 +12,10 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
+
+        // Nombre personalizado del APK
+        setProperty("archivesBaseName", "GestureControl-v1.0.0")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,16 +44,16 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-    // CameraX para la cámara
+    // CameraX
     implementation("androidx.camera:camera-core:1.3.1")
     implementation("androidx.camera:camera-camera2:1.3.1")
     implementation("androidx.camera:camera-lifecycle:1.3.1")
     implementation("androidx.camera:camera-view:1.3.1")
 
-    // ML Kit para detección facial
-    implementation("com.google.mlkit:face-detection:16.1.5")
+    // MediaPipe Hands - NUEVO
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
-    // Lifecycle Service - NUEVA LÍNEA
+    // Lifecycle Service
     implementation("androidx.lifecycle:lifecycle-service:2.6.2")
 
     // Permisos

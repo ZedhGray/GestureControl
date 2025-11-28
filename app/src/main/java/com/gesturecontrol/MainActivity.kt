@@ -6,22 +6,21 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.widget.TextView
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var statusText: TextView
     private lateinit var accessibilityStatusText: TextView
-    private lateinit var startButton: Button
-    private lateinit var stopButton: Button
-    private lateinit var enableAccessibilityButton: Button
-    private lateinit var instructionsText: TextView
+    private lateinit var startButton: CardView
+    private lateinit var stopButton: CardView
+    private lateinit var enableAccessibilityButton: CardView
 
     private var isServiceRunning = false
     private val CAMERA_PERMISSION_CODE = 100
@@ -31,12 +30,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Hacer que la app use pantalla completa con barra de estado transparente
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.decorView.systemUiVisibility =
+            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+
         statusText = findViewById(R.id.statusText)
         accessibilityStatusText = findViewById(R.id.accessibilityStatusText)
         startButton = findViewById(R.id.startButton)
         stopButton = findViewById(R.id.stopButton)
         enableAccessibilityButton = findViewById(R.id.enableAccessibilityButton)
-        instructionsText = findViewById(R.id.instructionsText)
 
         startButton.setOnClickListener {
             if (checkPermissions()) {
@@ -121,7 +125,7 @@ class MainActivity : AppCompatActivity() {
 
         if (requestCode == OVERLAY_PERMISSION_CODE) {
             if (Settings.canDrawOverlays(this)) {
-                Toast.makeText(this, "Permisos concedidos", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "✓ Permisos concedidos", Toast.LENGTH_SHORT).show()
                 updateUI()
             } else {
                 showPermissionDialog()
@@ -133,9 +137,8 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Permisos necesarios")
             .setMessage("GestureControl necesita:\n\n" +
-                    "• Cámara: Para detectar cuando mueves la cabeza\n" +
-                    "• Superposición: Para mostrarse sobre TikTok\n\n" +
-                    "Sin estos permisos la app no puede funcionar.")
+                    "• Cámara: Para detectar gestos\n" +
+                    "• Superposición: Para funcionar sobre otras apps")
             .setPositiveButton("Conceder") { _, _ ->
                 requestPermissions()
             }
@@ -146,12 +149,12 @@ class MainActivity : AppCompatActivity() {
     private fun showAccessibilityDialog() {
         AlertDialog.Builder(this)
             .setTitle("Activar Accesibilidad")
-            .setMessage("Para hacer swipes automáticos en TikTok, necesitas activar el servicio de accesibilidad:\n\n" +
+            .setMessage("Para hacer gestos automáticos:\n\n" +
                     "1. Se abrirá Configuración\n" +
                     "2. Busca 'GestureControl'\n" +
                     "3. Activa el interruptor\n" +
                     "4. Confirma con 'Permitir'")
-            .setPositiveButton("Ir a Configuración") { _, _ ->
+            .setPositiveButton("Ir") { _, _ ->
                 openAccessibilitySettings()
             }
             .setNegativeButton("Cancelar", null)
@@ -164,63 +167,63 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startGestureService() {
-        val intent = Intent(this, GestureService::class.java)
+        val intent = Intent(this, HandGestureService::class.java)
         ContextCompat.startForegroundService(this, intent)
         isServiceRunning = true
         updateUI()
-        Toast.makeText(this, "Control por gestos activado", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "✓ Control activado", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopGestureService() {
-        val intent = Intent(this, GestureService::class.java)
+        val intent = Intent(this, HandGestureService::class.java)
         stopService(intent)
         isServiceRunning = false
         updateUI()
-        Toast.makeText(this, "Control por gestos desactivado", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Control desactivado", Toast.LENGTH_SHORT).show()
     }
 
     private fun updateUI() {
         val hasPermissions = checkPermissions()
         val hasAccessibility = AccessibilityGestureService.isEnabled()
 
-        // Estado de permisos básicos
+        // Actualizar iconos de status
         if (hasPermissions) {
-            statusText.text = "✓ Permisos básicos: OK"
-            statusText.setTextColor(getColor(android.R.color.holo_green_dark))
+            statusText.text = "✓"
+            statusText.setTextColor(getColor(android.R.color.holo_green_light))
         } else {
-            statusText.text = "✗ Faltan permisos básicos"
-            statusText.setTextColor(getColor(android.R.color.holo_red_dark))
+            statusText.text = "✗"
+            statusText.setTextColor(getColor(android.R.color.holo_red_light))
         }
 
-        // Estado de accesibilidad
         if (hasAccessibility) {
-            accessibilityStatusText.text = "✓ Accesibilidad: Activada"
-            accessibilityStatusText.setTextColor(getColor(android.R.color.holo_green_dark))
+            accessibilityStatusText.text = "✓"
+            accessibilityStatusText.setTextColor(getColor(android.R.color.holo_green_light))
+            enableAccessibilityButton.alpha = 0.5f
             enableAccessibilityButton.isEnabled = false
         } else {
-            accessibilityStatusText.text = "✗ Accesibilidad: Desactivada"
-            accessibilityStatusText.setTextColor(getColor(android.R.color.holo_red_dark))
+            accessibilityStatusText.text = "✗"
+            accessibilityStatusText.setTextColor(getColor(android.R.color.holo_red_light))
+            enableAccessibilityButton.alpha = 1.0f
             enableAccessibilityButton.isEnabled = true
         }
 
-        // Botones de control
+        // Actualizar botones
         if (hasPermissions && hasAccessibility) {
             if (isServiceRunning) {
-                startButton.text = "Servicio activo ✓"
+                startButton.alpha = 0.5f
                 startButton.isEnabled = false
+                stopButton.alpha = 1.0f
                 stopButton.isEnabled = true
             } else {
-                startButton.text = "INICIAR CONTROL"
+                startButton.alpha = 1.0f
                 startButton.isEnabled = true
+                stopButton.alpha = 0.5f
                 stopButton.isEnabled = false
             }
         } else {
-            if (!hasPermissions) {
-                startButton.text = "CONCEDER PERMISOS"
-            } else {
-                startButton.text = "ACTIVAR ACCESIBILIDAD"
-            }
+            startButton.alpha = 1.0f
             startButton.isEnabled = true
+            stopButton.alpha = 0.5f
             stopButton.isEnabled = false
         }
     }
